@@ -4,7 +4,7 @@ Skill untuk AI coding agent yang membuat frontend **bersih, glossy, halus, inter
 
 Bekerja di **Claude Code, OpenCode, Codex, Antigravity**, dan alat lain lewat `AGENTS.md`. Pemasang berjalan di Windows, macOS, dan Linux, tanpa dependensi tambahan selain Node.js 18.3+.
 
-> Status: **v0.9.0 (pra-rilis)**. Pemasang sudah dites otomatis; skill-nya sendiri menunggu uji pada proyek nyata (lihat [docs/PROMPTS.md](docs/PROMPTS.md)).
+> Status: **v0.9.1 (pra-rilis)**. Pemasang sudah dites otomatis; skill-nya sendiri menunggu uji pada proyek nyata (lihat [docs/PROMPTS.md](docs/PROMPTS.md)).
 
 ## Mulai cepat
 
@@ -52,6 +52,7 @@ Alternatif tanpa `npx`: `git clone`, lalu `node bin/cli.mjs install --dir /path/
 | `--pm npm\|pnpm\|yarn\|bun` | Manajer paket (bawaan: terdeteksi dari lockfile) |
 | `--with-agents-md` | Tambah blok aturan ke `AGENTS.md` dan `CLAUDE.md` (tidak menimpa isi Anda) |
 | `--no-browsers` | Lewati unduhan browser Playwright |
+| `--force` | Timpa atau hapus folder skill yang punya perubahan lokal |
 | `--dry-run` | Tampilkan rencana tanpa mengubah apa pun |
 
 ### Preset
@@ -73,6 +74,28 @@ Daftar paket tiap preset ada di [`presets.json`](skills/glass-motion-frontend/pr
 | OpenCode | membaca `.claude/skills/` dan `.agents/skills/` (salinan sendiri: `--agent opencode` → `.opencode/skills/`) | membaca `~/.claude/skills/`; salinan sendiri: `~/.config/opencode/skills/` |
 
 Detail dan cara memasang manual: [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md).
+
+## Aman untuk proyek Anda
+
+Kit tidak menimpa berkas yang sudah ada.
+
+| Yang dilakukan | Aturannya |
+|---|---|
+| `install` | Hanya menulis folder `glass-motion-frontend/` di dalam folder skill. Skill lain dan berkas proyek tidak disentuh |
+| Folder skill sudah ada dan identik | Dilewati ("up to date") |
+| Folder skill sudah ada tapi Anda mengubahnya, atau ada berkas tambahan, atau itu skill lain dengan nama sama | **Dilewati**, daftar berkas yang berbeda ditampilkan, tidak ada yang diubah. Pakai `--force` bila memang ingin menimpa |
+| `--with-agents-md` | `AGENTS.md` yang sudah ada tidak ditimpa: kit menambahkan satu blok di antara penanda `<!-- glass-motion-frontend:start/end -->`. Menjalankan ulang hanya memperbarui blok itu |
+| `CLAUDE.md` | Dibuat hanya jika belum ada. Jika sudah ada, kit hanya menyarankan menambah baris `@AGENTS.md` |
+| `setup` | Paket yang sudah ada di `package.json` dilewati, versi Anda tidak diubah. `biome init` hanya jalan jika belum ada `biome.json` |
+| `uninstall` | Menolak menghapus folder skill yang sudah Anda ubah, kecuali `--force` |
+
+Ingin mengubah skill? Edit di fork repo ini, bukan di folder hasil pemasangan, supaya pembaruan berikutnya tidak berbenturan. Cek dulu dengan `--dry-run` bila ragu.
+
+## Pertanyaan umum
+
+**`setup` berkata `package.json not found`.** `setup` memasang paket npm ke proyek yang sudah ada, jadi jalankan dari folder utama proyek Anda (yang berisi `package.json`). Belum punya proyek? `npx create-next-app@latest my-app --ts --tailwind --app`, masuk ke folder itu, lalu jalankan `install` dan `setup`. `install` juga sebaiknya dijalankan dari folder proyek yang sama, bukan dari folder kosong.
+
+**Skill sudah terpasang di folder yang salah.** Jalankan `uninstall` di folder tersebut, lalu `install` lagi di folder proyek yang benar.
 
 ## Fungsi tiap pustaka
 

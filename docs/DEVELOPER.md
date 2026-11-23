@@ -102,6 +102,8 @@ Menerbitkan ke npm itu opsional. Tanpa npm, pengguna tetap bisa memakai `npx git
 | Gejala | Penyebab umum | Solusi |
 |---|---|---|
 | Skill tidak muncul di alat AI | Alat belum dimulai ulang; nama berkas bukan `SKILL.md` huruf besar; frontmatter tanpa `name` atau `description` | Mulai ulang alat, jalankan `doctor` |
+| `install` menampilkan "skip ... differs from the kit" | Folder skill diubah lokal, ada berkas tambahan, atau skill lain bernama sama | Periksa daftar berkas yang ditampilkan; tambahkan `--force` hanya bila boleh ditimpa |
+| `setup` menampilkan "package.json not found" | Dijalankan di luar folder proyek | Pindah ke folder proyek, atau buat dulu dengan `npx create-next-app@latest` |
 | `doctor` memberi "version differs" | Salinan lama di proyek atau global | Jalankan `install` lagi |
 | OpenCode melaporkan nama skill ganda | Skill ada di `.claude/skills` dan `.opencode/skills` sekaligus | Pasang tanpa `--agent opencode`, atau hapus salah satu salinan |
 | Agen tidak memakai skill | `description` kurang cocok dengan permintaan | Sebut nama skill di prompt, atau perluas kata kunci di `description` |
@@ -116,5 +118,7 @@ Menerbitkan ke npm itu opsional. Tanpa npm, pengguna tetap bisa memakai `npx git
 **Kenapa tidak ESLint dan Prettier?** Biome menggabungkan lint dan format dalam satu alat yang cepat. Dua toolchain memberi konflik aturan yang membingungkan agen.
 
 **Kenapa ada `AGENTS.md` dan skill?** Skill memuat panduan lengkap secara bertahap. `AGENTS.md` adalah versi ringkas yang selalu dibaca, dan menjadi cadangan untuk alat yang belum mendukung skill.
+
+**Bagaimana kit tahu folder skill sudah diubah?** Saat `install`, kit menulis `.fvk-manifest.json` di folder skill berisi hash SHA-256 tiap berkas. Saat dijalankan lagi, kit membandingkan isi folder dengan manifest; berbeda berarti ada perubahan lokal. Tanpa manifest (disalin manual), isi folder dibandingkan langsung dengan sumber.
 
 **Boleh dipakai selain Next.js?** Skill ditulis dengan contoh Next.js App Router. Prinsip dan sebagian besar pustaka bekerja di Vite + React juga; adaptor `nuqs` dan impor `next/dynamic` perlu diganti.

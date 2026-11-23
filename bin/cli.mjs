@@ -9,11 +9,14 @@ import {
   BLOCK_END,
   BLOCK_START,
   DEFAULT_AGENTS,
+  MANIFEST,
   ROOT,
   SKILL,
   SRC,
+  inspectInstalled,
   readMeta,
   uniqueTargets,
+  writeManifest,
 } from "./lib.mjs";
 import { resolvePreset } from "../skills/glass-motion-frontend/scripts/lib/preset.mjs";
 
@@ -36,6 +39,7 @@ Options:
   --pm <name>         npm, pnpm, yarn or bun  (setup; default: detected from lockfile)
   --with-agents-md    Also add the rules block to AGENTS.md and CLAUDE.md (project scope)
   --no-browsers       Skip the Playwright browser download  (setup)
+  --force             Overwrite or remove a skill folder that has local changes
   --dry-run           Show what would happen without changing anything
   --home <path>       Override the home directory (testing)
   -h, --help          Show this help
@@ -68,6 +72,7 @@ try {
       "with-agents-md": { type: "boolean", default: false },
       "no-browsers": { type: "boolean", default: false },
       "dry-run": { type: "boolean", default: false },
+      force: { type: "boolean", default: false },
       help: { type: "boolean", short: "h", default: false },
       version: { type: "boolean", short: "v", default: false },
     },
@@ -160,38 +165,64 @@ function removeAgentsMdBlock() {
 function install() {
   const agents = resolveAgents(values.agent);
   if (scope === "project" && !fs.existsSync(base)) fail(`Directory not found: ${base}`);
+  let blocked = 0;
   for (const [dir, who] of uniqueTargets(agents, scope, base, home)) {
     const dest = path.join(dir, SKILL);
     assertSafeDest(dest);
-    const verb = fs.existsSync(dest) ? "update " : "install";
-    console.log(`${tag}${verb} (${who.join("+")}): ${dest}`);
+    const { state, changed } = inspectInstalled(dest);
+    const label = `(${who.join("+")}): ${dest}`;
+
+    if (state === "identical") {
+      console.log(`${tag}up to date ${label}`);
+      if (!dryRun && !fs.existsSync(path.join(dest, MANIFEST))) writeManifest(dest, srcMeta?.version);
+      continue;
+    }
+    if (state === "modified" && !values.force) {
+      blocked++;
+      console.log(`skip ${label}`);
+      console.log("  A folder with this name already exists and differs from the kit:");
+      for (const file of changed.slice(0, 8)) console.log(`    - ${file}`);
+      if (changed.length > 8) console.log(`    ... and ${changed.length - 8} more`);
+      console.log("  Nothing was changed. Use --force to overwrite it.");
+      continue;
+    }
+    const verb = state === "missing" ? "install" : state === "modified" ? "overwrite (forced)" : "update";
+    console.log(`${tag}${verb} ${label}`);
     if (dryRun) continue;
     fs.mkdirSync(dir, { recursive: true });
     fs.rmSync(dest, { recursive: true, force: true });
     fs.cpSync(SRC, dest, { recursive: true });
+    writeManifest(dest, srcMeta?.version);
   }
   if (values["with-agents-md"]) {
     if (scope === "global") console.log("note: --with-agents-md applies to projects only; skipped.");
     else upsertAgentsMd();
   }
-  if (!dryRun) {
-    console.log("\nDone. Restart your AI tool so it re-reads skills, then run: doctor");
-  }
+  if (blocked) process.exitCode = 1;
+  else if (!dryRun) console.log("\nDone. Restart your AI tool so it re-reads skills, then run: doctor");
 }
 
 function uninstall() {
   const agents = values.agent === "all" ? AGENTS : resolveAgents(values.agent);
   let removed = 0;
+  let blocked = 0;
   for (const [dir, who] of uniqueTargets(agents, scope, base, home)) {
     const dest = path.join(dir, SKILL);
     assertSafeDest(dest);
-    if (!fs.existsSync(dest)) continue;
+    const { state, changed } = inspectInstalled(dest);
+    if (state === "missing") continue;
+    if (state === "modified" && !values.force) {
+      blocked++;
+      console.log(`skip (${who.join("+")}): ${dest} has local changes (${changed.slice(0, 3).join(", ")}). Use --force to remove it.`);
+      continue;
+    }
     console.log(`${tag}remove (${who.join("+")}): ${dest}`);
     removed++;
     if (!dryRun) fs.rmSync(dest, { recursive: true, force: true });
   }
   if (values["with-agents-md"] && scope === "project") removeAgentsMdBlock();
-  if (!removed) console.log("Nothing to remove.");
+  if (blocked) process.exitCode = 1;
+  else if (!removed) console.log("Nothing to remove.");
 }
 
 function doctor() {

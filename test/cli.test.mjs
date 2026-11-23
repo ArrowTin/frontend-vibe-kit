@@ -120,3 +120,84 @@ test("setup --dry-run prints the install plan for each preset", () => {
 
   assert.equal(run(["setup", "--dry-run", "--preset", "nope", "--dir", project]).status, 1);
 });
+
+// ---- Safety: never overwrite what the user already has ---------------------
+
+test("a second install is a no-op ('up to date')", () => {
+  const project = tmp();
+  const home = tmp();
+  run(["install", "--dir", project, "--home", home]);
+  const r = run(["install", "--dir", project, "--home", home]);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /up to date/);
+});
+
+test("locally edited skill is NOT overwritten without --force", () => {
+  const project = tmp();
+  const home = tmp();
+  run(["install", "--dir", project, "--home", home]);
+  const file = path.join(project, ".claude", "skills", SKILL, "SKILL.md");
+  fs.appendFileSync(file, "\nMY LOCAL NOTE\n");
+  const r = run(["install", "--dir", project, "--home", home]);
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /Use --force/);
+  assert.match(fs.readFileSync(file, "utf8"), /MY LOCAL NOTE/);
+
+  const forced = run(["install", "--force", "--dir", project, "--home", home]);
+  assert.equal(forced.status, 0, forced.stderr);
+  assert.doesNotMatch(fs.readFileSync(file, "utf8"), /MY LOCAL NOTE/);
+});
+
+test("extra files the user added inside the skill folder are protected too", () => {
+  const project = tmp();
+  const home = tmp();
+  run(["install", "--dir", project, "--home", home]);
+  const extra = path.join(project, ".claude", "skills", SKILL, "my-notes.md");
+  fs.writeFileSync(extra, "keep me");
+  const r = run(["install", "--dir", project, "--home", home]);
+  assert.equal(r.status, 1);
+  assert.ok(fs.existsSync(extra));
+  assert.equal(run(["uninstall", "--dir", project, "--home", home]).status, 1);
+  assert.ok(fs.existsSync(extra));
+});
+
+test("a different pre-existing skill with the same name is not overwritten", () => {
+  const project = tmp();
+  const dest = path.join(project, ".claude", "skills", SKILL);
+  fs.mkdirSync(dest, { recursive: true });
+  fs.writeFileSync(path.join(dest, "SKILL.md"), "---\nname: glass-motion-frontend\ndescription: mine\n---\nMine\n");
+  const r = run(["install", "--agent", "claude", "--dir", project, "--home", tmp()]);
+  assert.equal(r.status, 1);
+  assert.match(fs.readFileSync(path.join(dest, "SKILL.md"), "utf8"), /Mine/);
+});
+
+test("install never touches unrelated project files", () => {
+  const project = tmp();
+  fs.writeFileSync(path.join(project, "package.json"), '{"name":"keep"}');
+  fs.writeFileSync(path.join(project, "CLAUDE.md"), "# my claude file\n");
+  fs.mkdirSync(path.join(project, ".claude", "skills", "other-skill"), { recursive: true });
+  fs.writeFileSync(path.join(project, ".claude", "skills", "other-skill", "SKILL.md"), "other");
+  const r = run(["install", "--with-agents-md", "--dir", project, "--home", tmp()]);
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(fs.readFileSync(path.join(project, "package.json"), "utf8"), '{"name":"keep"}');
+  assert.equal(fs.readFileSync(path.join(project, "CLAUDE.md"), "utf8"), "# my claude file\n");
+  assert.equal(fs.readFileSync(path.join(project, ".claude", "skills", "other-skill", "SKILL.md"), "utf8"), "other");
+  assert.match(r.stdout, /@AGENTS\.md/);
+});
+
+test("setup leaves packages already in package.json untouched", () => {
+  const project = tmp();
+  fs.writeFileSync(path.join(project, "package.json"), JSON.stringify({ dependencies: { sonner: "1.0.0", zod: "^3.0.0" } }));
+  const r = run(["setup", "--dry-run", "--pm", "npm", "--dir", project]);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /left untouched: .*sonner/);
+  const addLines = r.stdout.split("\n").filter((l) => l.startsWith("$ npm install"));
+  assert.ok(addLines.length > 0);
+  for (const line of addLines) assert.doesNotMatch(line, /\bsonner\b|\bzod\b/);
+});
+
+test("setup without package.json explains what to do", () => {
+  const r = run(["setup", "--dir", tmp()]);
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /create-next-app/);
+});

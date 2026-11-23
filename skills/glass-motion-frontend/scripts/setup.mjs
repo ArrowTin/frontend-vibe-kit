@@ -42,7 +42,13 @@ if (values.help) {
 
 const cwd = process.cwd();
 if (!fs.existsSync(path.join(cwd, "package.json"))) {
-  fail("package.json not found. Run this from your project root.");
+  fail(
+    `package.json not found in ${cwd}\n` +
+      "setup installs npm packages into an existing project, so run it from the project root.\n" +
+      "No project yet? Create one first, for example:\n" +
+      "  npx create-next-app@latest my-app --ts --tailwind --app\n" +
+      "  cd my-app",
+  );
 }
 
 function detectPm() {
@@ -84,21 +90,42 @@ function run(args, { optional = false } = {}) {
   }
 }
 
+const fullPlan = structuredClone(plan);
+// Never touch packages the project already has (keeps the user's versions).
+let existing = {};
+try {
+  const pkg = JSON.parse(fs.readFileSync(path.join(cwd, "package.json"), "utf8"));
+  existing = { ...pkg.dependencies, ...pkg.devDependencies };
+} catch {
+  fail("package.json is not valid JSON");
+}
+const skipped = [];
+for (const key of Object.keys(plan)) {
+  plan[key] = plan[key].filter((name) => {
+    if (name in existing) {
+      skipped.push(name);
+      return false;
+    }
+    return true;
+  });
+}
+
 const cfg = PMS[pm];
 console.log(`Preset: ${values.preset}   Package manager: ${pm}${dryRun ? "   (dry run)" : ""}\n`);
 
+if (skipped.length) console.log(`Already in package.json, left untouched: ${skipped.join(", ")}\n`);
 if (plan.dependencies.length) run([pm, ...cfg.add, ...plan.dependencies]);
 if (plan.devDependencies.length) run([pm, ...cfg.add, cfg.dev, ...plan.devDependencies]);
 if (plan.devDependenciesExact.length) {
   run([pm, ...cfg.add, cfg.dev, cfg.exact, ...plan.devDependenciesExact]);
 }
 
-const hasBiome = plan.devDependenciesExact.includes("@biomejs/biome");
+const hasBiome = fullPlan.devDependenciesExact.includes("@biomejs/biome");
 const biomeConfigured =
   fs.existsSync(path.join(cwd, "biome.json")) || fs.existsSync(path.join(cwd, "biome.jsonc"));
 if (hasBiome && !biomeConfigured) run([...cfg.exec, "biome", "init"], { optional: true });
 
-if (plan.devDependencies.includes("@playwright/test") && !values["no-browsers"]) {
+if (fullPlan.devDependencies.includes("@playwright/test") && !values["no-browsers"]) {
   run([...cfg.exec, "playwright", "install", "chromium"], { optional: true });
 }
 

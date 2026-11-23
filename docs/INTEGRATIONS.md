@@ -19,6 +19,10 @@ Perilaku bawaan `install` tanpa `--agent`: menyalin ke `.claude/skills/` dan `.a
 
 Salin folder `skills/glass-motion-frontend/` utuh (termasuk `references/`, `scripts/`, `presets.json`) ke salah satu folder di atas. Menyalin `SKILL.md` saja tidak cukup, karena referensinya ikut dibutuhkan.
 
+### Pembaruan dan keamanan
+
+`install` yang diulang memperbarui skill hanya jika folder terpasang belum Anda ubah. Jika sudah diubah (atau ada skill lain bernama sama), kit melewatinya dan menampilkan daftar perbedaan; pakai `--force` bila boleh ditimpa.
+
 ## Memicu skill
 
 Kebanyakan alat memilih skill otomatis berdasarkan `description`. Agar pasti, sebut namanya:

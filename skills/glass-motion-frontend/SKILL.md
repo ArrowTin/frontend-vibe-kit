@@ -3,7 +3,7 @@ name: glass-motion-frontend
 description: Build calm, polished, glossy and interactive React/Next.js frontends (smooth motion, subtle 3D, clean glass surfaces) by composing coss ui, Magic UI, Tremor, Lucide, unDraw, React Hook Form, TanStack, Sonner and nuqs, and verifying with Biome, Vitest, Playwright and React Scan. Use when asked to build, restyle or polish a web UI, landing page, dashboard, form, table or component that should feel premium, smooth and pleasant to stay on.
 license: MIT
 metadata:
-  version: "0.9.0"
+  version: "0.9.1"
 ---
 
 # Glass Motion Frontend

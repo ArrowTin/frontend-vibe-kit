@@ -1,6 +1,6 @@
 {
   "name": "frontend-vibe-kit",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "An AI agent skill for building glossy, smooth, interactive React/Next.js frontends with coss ui, Magic UI, Tremor, TanStack and friends. Works with Claude Code, OpenCode, Codex and Antigravity.",
   "type": "module",
   "license": "MIT",
