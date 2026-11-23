@@ -119,3 +119,77 @@ export function writeManifest(dest, version) {
   const body = { kit: "frontend-vibe-kit", skill: SKILL, version, files: hashDir(SRC) };
   fs.writeFileSync(path.join(dest, MANIFEST), `${JSON.stringify(body, null, 2)}\n`);
 }
+
+// ---- Rules block in AGENTS.md / CLAUDE.md ---------------------------------------------------
+// The user's own text is never rewritten. The kit only appends one block between two markers,
+// or replaces what is between those markers on a later run.
+
+const detectEol = (text) => (text.includes("\r\n") ? "\r\n" : "\n");
+const withEol = (text, eol) => text.replace(/\r\n/g, "\n").replace(/\n/g, eol);
+
+function findBlock(text) {
+  const start = text.indexOf(BLOCK_START);
+  if (start === -1) {
+    if (text.includes(BLOCK_END)) return { error: "found an end marker without a start marker" };
+    return null;
+  }
+  const end = text.indexOf(BLOCK_END, start);
+  if (end === -1) return { error: "found a start marker without an end marker" };
+  if (text.indexOf(BLOCK_START, start + BLOCK_START.length) !== -1 && text.indexOf(BLOCK_START, start + BLOCK_START.length) < end) {
+    return { error: "found nested start markers" };
+  }
+  return { start, end: end + BLOCK_END.length };
+}
+
+// Returns { next, action } or { error }. `next` always keeps every character of `text`
+// outside the block byte for byte; this is verified before returning.
+export function upsertBlock(text, body) {
+  const eol = detectEol(text);
+  const block = withEol(`${BLOCK_START}\n${body.trim()}\n${BLOCK_END}`, eol);
+  const found = findBlock(text);
+  if (found?.error) return { error: found.error };
+
+  let next;
+  let action;
+  if (found) {
+    next = text.slice(0, found.start) + block + text.slice(found.end);
+    action = "update";
+    if (text.slice(0, found.start) !== next.slice(0, found.start)) return { error: "internal check failed" };
+  } else {
+    const lead = text === "" ? "" : text.endsWith("\n") ? eol : eol + eol;
+    next = `${text}${lead}${block}${eol}`;
+    action = text === "" ? "create" : "append";
+    if (!next.startsWith(text)) return { error: "internal check failed" };
+  }
+  return { next, action: next === text ? "unchanged" : action };
+}
+
+// Removes the block and the single separator the kit added in front of it.
+export function removeBlock(text) {
+  const found = findBlock(text);
+  if (!found) return { next: text, removed: false };
+  if (found.error) return { error: found.error };
+  const eol = detectEol(text);
+  let before = text.slice(0, found.start);
+  let after = text.slice(found.end);
+  if (after.startsWith(eol)) after = after.slice(eol.length);
+  if (before.endsWith(eol + eol)) before = before.slice(0, -eol.length);
+  else if (before.endsWith(eol) && after === "") before = before.slice(0, -eol.length);
+  return { next: before + after, removed: true };
+}
+
+export const BACKUP_SUFFIX = ".fvk-backup";
+
+// Resolve symlinks so we edit the real file; report what we cannot safely touch.
+export function resolveTarget(file) {
+  const stat = fs.lstatSync(file, { throwIfNoEntry: false });
+  if (!stat) return { kind: "missing", path: file };
+  let real;
+  try {
+    real = fs.realpathSync(file);
+  } catch {
+    return { kind: "dangling", path: file };
+  }
+  if (!fs.statSync(real).isFile()) return { kind: "not-a-file", path: file };
+  return { kind: "file", path: real };
+}

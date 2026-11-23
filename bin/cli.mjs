@@ -6,7 +6,7 @@ import { spawnSync } from "node:child_process";
 import { parseArgs } from "node:util";
 import {
   AGENTS,
-  BLOCK_END,
+  BACKUP_SUFFIX,
   BLOCK_START,
   DEFAULT_AGENTS,
   MANIFEST,
@@ -15,10 +15,14 @@ import {
   SRC,
   inspectInstalled,
   readMeta,
+  removeBlock,
+  resolveTarget,
   uniqueTargets,
+  upsertBlock,
   writeManifest,
 } from "./lib.mjs";
 import { resolvePreset } from "../skills/glass-motion-frontend/scripts/lib/preset.mjs";
+import { STACKS, detectStack } from "../skills/glass-motion-frontend/scripts/lib/stack.mjs";
 
 const HELP = `Frontend Vibe Kit: install the "${SKILL}" skill for AI coding tools.
 
@@ -29,15 +33,21 @@ Commands:
   install      Copy the skill into the folders your AI tools read
   uninstall    Remove the skill from those folders
   doctor       Check installation, versions and project setup
-  setup        Install the npm dependencies of a preset into the current project
+  setup        Existing project: adapts to it and installs nothing unless you approve the listed
+               packages. Empty folder: asks what to build with (Next.js, Vite + React, or plain
+               HTML/CSS/JS) and scaffolds it
 
 Options:
   --agent <list>      claude, opencode, codex, antigravity (comma separated) or "all" (default)
   --global            Use user-level folders instead of the project
   --dir <path>        Project directory (default: current directory)
+  --stack <name>      next, vite or vanilla (plain HTML/CSS/JS). For setup in an empty folder
   --preset <name>     full (default), no-3d or lite  (setup and doctor)
   --pm <name>         npm, pnpm, yarn or bun  (setup; default: detected from lockfile)
-  --with-agents-md    Also add the rules block to AGENTS.md and CLAUDE.md (project scope)
+  --with-agents-md    Also add the rules block to AGENTS.md and CLAUDE.md (project scope).
+                      Existing text is never rewritten; the block is appended between markers
+  --no-backup         Do not save AGENTS.md.fvk-backup / CLAUDE.md.fvk-backup before editing
+  --approve           Approve installing the optional packages setup lists for an existing project
   --no-browsers       Skip the Playwright browser download  (setup)
   --force             Overwrite or remove a skill folder that has local changes
   --dry-run           Show what would happen without changing anything
@@ -49,6 +59,7 @@ Examples:
   npx github:ArrowTin/frontend-vibe-kit install --with-agents-md
   npx github:ArrowTin/frontend-vibe-kit install --global
   npx github:ArrowTin/frontend-vibe-kit setup --preset no-3d
+  npx github:ArrowTin/frontend-vibe-kit setup --stack vanilla     # empty folder, no framework
   npx github:ArrowTin/frontend-vibe-kit doctor
 `;
 
@@ -68,9 +79,12 @@ try {
       dir: { type: "string" },
       home: { type: "string" },
       preset: { type: "string", default: "full" },
+      stack: { type: "string" },
       pm: { type: "string" },
       "with-agents-md": { type: "boolean", default: false },
+      "no-backup": { type: "boolean", default: false },
       "no-browsers": { type: "boolean", default: false },
+      approve: { type: "boolean", default: false },
       "dry-run": { type: "boolean", default: false },
       force: { type: "boolean", default: false },
       help: { type: "boolean", short: "h", default: false },
@@ -113,53 +127,87 @@ function assertSafeDest(dest) {
   if (path.basename(dest) !== SKILL) fail(`Refusing to touch unexpected path: ${dest}`);
 }
 
-function agentsMdBlock() {
-  const rules = fs.readFileSync(path.join(ROOT, "AGENTS.md"), "utf8").trim();
-  return `${BLOCK_START}\n${rules}\n${BLOCK_END}\n`;
+function agentsMdBody() {
+  return fs.readFileSync(path.join(ROOT, "AGENTS.md"), "utf8");
+}
+
+// Add or refresh the kit's block in one file. Never rewrites the user's own text.
+function writeBlock(file, body) {
+  const target = resolveTarget(file);
+  if (target.kind === "dangling" || target.kind === "not-a-file") {
+    console.log(`note: ${file} is a ${target.kind === "dangling" ? "broken symlink" : "folder"}; left untouched.`);
+    return false;
+  }
+  const exists = target.kind === "file";
+  const text = exists ? fs.readFileSync(target.path, "utf8") : "";
+  const result = upsertBlock(text, body);
+  if (result.error) {
+    console.log(`skip ${file}: ${result.error} (kit markers are damaged). Nothing was changed.`);
+    console.log("  Fix or delete the lines containing the glass-motion-frontend markers, then run again.");
+    process.exitCode = 1;
+    return false;
+  }
+  if (result.action === "unchanged") {
+    console.log(`${tag}up to date ${file}`);
+    return true;
+  }
+  const verb = { create: "create", append: "append rules block to", update: "update rules block in" }[result.action];
+  console.log(`${tag}${verb} ${file}`);
+  if (dryRun) return true;
+  if (exists && !values["no-backup"]) {
+    const backup = target.path + BACKUP_SUFFIX;
+    if (!fs.existsSync(backup)) {
+      fs.copyFileSync(target.path, backup, fs.constants.COPYFILE_EXCL);
+      console.log(`  backup of your original: ${backup}`);
+    }
+  }
+  fs.writeFileSync(target.path, result.next);
+  return true;
 }
 
 function upsertAgentsMd() {
-  const target = path.join(base, "AGENTS.md");
-  const block = agentsMdBlock();
-  if (!fs.existsSync(target)) {
-    console.log(`${tag}create ${target}`);
-    if (!dryRun) fs.writeFileSync(target, block);
-  } else {
-    const text = fs.readFileSync(target, "utf8");
-    const start = text.indexOf(BLOCK_START);
-    const end = text.indexOf(BLOCK_END);
-    let next;
-    if (start !== -1 && end > start) {
-      next = text.slice(0, start) + block.trimEnd() + text.slice(end + BLOCK_END.length);
-      console.log(`${tag}update rules block in ${target}`);
-    } else {
-      next = `${text.replace(/\s*$/, "")}\n\n${block}`;
-      console.log(`${tag}append rules block to ${target}`);
-    }
-    if (!dryRun) fs.writeFileSync(target, next);
-  }
+  const agents = path.join(base, "AGENTS.md");
+  if (!writeBlock(agents, agentsMdBody())) return;
 
+  // Claude Code reads CLAUDE.md, so point it at AGENTS.md. Append-only, like above.
   const claude = path.join(base, "CLAUDE.md");
-  if (!fs.existsSync(claude)) {
-    console.log(`${tag}create ${claude}`);
-    if (!dryRun) fs.writeFileSync(claude, "@AGENTS.md\n");
-  } else if (!fs.readFileSync(claude, "utf8").includes("@AGENTS.md")) {
-    console.log(`note: ${claude} exists. Add the line "@AGENTS.md" so Claude Code reads the rules.`);
+  const c = resolveTarget(claude);
+  const a = resolveTarget(agents);
+  if (c.kind === "file" && a.kind === "file" && c.path === a.path) {
+    console.log(`ok ${claude} is the same file as AGENTS.md; nothing to add`);
+    return;
   }
+  if (c.kind === "file") {
+    const text = fs.readFileSync(c.path, "utf8");
+    if (/^\s*@AGENTS\.md\s*$/m.test(text) && !text.includes(BLOCK_START)) {
+      console.log(`ok ${claude} already imports @AGENTS.md`);
+      return;
+    }
+  }
+  writeBlock(claude, "@AGENTS.md");
 }
 
 function removeAgentsMdBlock() {
-  const target = path.join(base, "AGENTS.md");
-  if (!fs.existsSync(target)) return;
-  const text = fs.readFileSync(target, "utf8");
-  const start = text.indexOf(BLOCK_START);
-  const end = text.indexOf(BLOCK_END);
-  if (start === -1 || end < start) return;
-  const next = (text.slice(0, start) + text.slice(end + BLOCK_END.length)).replace(/\n{3,}/g, "\n\n");
-  console.log(`${tag}remove rules block from ${target}`);
-  if (dryRun) return;
-  if (next.trim() === "") fs.rmSync(target);
-  else fs.writeFileSync(target, `${next.trim()}\n`);
+  for (const name of ["AGENTS.md", "CLAUDE.md"]) {
+    const file = path.join(base, name);
+    const target = resolveTarget(file);
+    if (target.kind !== "file") continue;
+    const result = removeBlock(fs.readFileSync(target.path, "utf8"));
+    if (result.error) {
+      console.log(`skip ${file}: ${result.error} (kit markers are damaged). Nothing was changed.`);
+      process.exitCode = 1;
+      continue;
+    }
+    if (!result.removed) continue;
+    console.log(`${tag}remove rules block from ${file}`);
+    if (dryRun) continue;
+    const backup = target.path + BACKUP_SUFFIX;
+    if (result.next.trim() === "") fs.rmSync(target.path);
+    else fs.writeFileSync(target.path, result.next);
+    if (fs.existsSync(backup) && fs.existsSync(target.path) && fs.readFileSync(backup, "utf8") === result.next) {
+      fs.rmSync(backup);
+    }
+  }
 }
 
 function install() {
@@ -199,7 +247,14 @@ function install() {
     else upsertAgentsMd();
   }
   if (blocked) process.exitCode = 1;
-  else if (!dryRun) console.log("\nDone. Restart your AI tool so it re-reads skills, then run: doctor");
+  else if (!dryRun) {
+    console.log("\nDone. Restart your AI tool so it re-reads skills, then run: doctor");
+    if (scope === "project" && ["empty", "other"].includes(detectStack(base))) {
+      console.log("\nThe skill is installed, but there is no project in this folder yet.");
+      console.log("Next: run `setup` and choose what to build with:");
+      for (const [key, stack] of Object.entries(STACKS)) console.log(`  setup --stack ${key.padEnd(8)} ${stack.label}`);
+    }
+  }
 }
 
 function uninstall() {
@@ -266,16 +321,20 @@ function doctor() {
   if (!found) bad("skill is not installed. Run: install (add --global for all projects)");
 
   console.log(`\nProject (${base})`);
-  const pkgFile = path.join(base, "package.json");
-  if (!fs.existsSync(pkgFile)) {
-    warn("no package.json here; dependency checks skipped");
+  const stack = detectStack(base);
+  const exists = (f) => fs.existsSync(path.join(base, f));
+  const usesNpm = ["next", "vite", "react"].includes(stack);
+
+  if (stack === "empty" || stack === "other") {
+    warn("no project yet (no package.json, no index.html). Run: setup  (Next.js, Vite + React or plain HTML/CSS/JS)");
+  } else if (stack === "vanilla") {
+    ok("plain HTML/CSS/JS project: the skill uses its no-framework mode; React, Tailwind and npm checks skipped");
+  } else if (stack === "invalid-package") {
+    bad("package.json is not valid JSON");
+  } else if (stack === "other-framework" || stack === "node") {
+    ok("existing non-React project: the skill adapts to it; React, Tailwind and preset checks skipped");
   } else {
-    let pkg = {};
-    try {
-      pkg = JSON.parse(fs.readFileSync(pkgFile, "utf8"));
-    } catch {
-      bad("package.json is not valid JSON");
-    }
+    const pkg = JSON.parse(fs.readFileSync(path.join(base, "package.json"), "utf8"));
     const all = { ...pkg.dependencies, ...pkg.devDependencies };
     const major = (range) => Number((/(\d+)/.exec(range ?? "") ?? [])[1]);
 
@@ -300,11 +359,12 @@ function doctor() {
 
     if (all.eslint || all.prettier) warn("ESLint/Prettier found; the kit uses Biome only");
   }
-  const exists = (f) => fs.existsSync(path.join(base, f));
-  if (exists("biome.json") || exists("biome.jsonc")) ok("biome config");
-  else warn("no biome.json (run setup, or: npx biome init)");
-  if (exists("components.json")) ok("components.json (shadcn / coss ui)");
-  else warn("no components.json (run: npx shadcn@latest init @coss/style)");
+  if (usesNpm) {
+    if (exists("biome.json") || exists("biome.jsonc")) ok("biome config");
+    else warn("no biome.json (run setup, or: npx biome init)");
+    if (exists("components.json")) ok("components.json (shadcn / coss ui)");
+    else warn("no components.json (run: npx shadcn@latest init @coss/style)");
+  }
   if (exists("AGENTS.md")) ok("AGENTS.md");
   else warn("no AGENTS.md (install with --with-agents-md)");
 
@@ -314,9 +374,11 @@ function doctor() {
 
 function setup() {
   const args = [path.join(SRC, "scripts", "setup.mjs"), "--preset", values.preset];
+  if (values.stack) args.push("--stack", values.stack);
   if (values.pm) args.push("--pm", values.pm);
   if (dryRun) args.push("--dry-run");
   if (values["no-browsers"]) args.push("--no-browsers");
+  if (values.approve) args.push("--approve");
   const result = spawnSync(process.execPath, args, { cwd: base, stdio: "inherit" });
   process.exit(result.status ?? 1);
 }

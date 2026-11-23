@@ -1,9 +1,9 @@
 ---
 name: glass-motion-frontend
-description: Build calm, polished, glossy and interactive React/Next.js frontends (smooth motion, subtle 3D, clean glass surfaces) by composing coss ui, Magic UI, Tremor, Lucide, unDraw, React Hook Form, TanStack, Sonner and nuqs, and verifying with Biome, Vitest, Playwright and React Scan. Use when asked to build, restyle or polish a web UI, landing page, dashboard, form, table or component that should feel premium, smooth and pleasant to stay on.
+description: Build calm, polished, glossy and interactive frontends (smooth motion, subtle 3D, clean glass surfaces) in React/Next.js, or in plain HTML/CSS/JS when the project has no framework, by composing coss ui, Magic UI, Tremor, Lucide, unDraw, React Hook Form, TanStack, Sonner and nuqs, and verifying with Biome, Vitest, Playwright and React Scan. Use when asked to build, restyle or polish a web UI, landing page, dashboard, form, table or component that should feel premium, smooth and pleasant to stay on.
 license: MIT
 metadata:
-  version: "0.9.1"
+  version: "0.10.0"
 ---
 
 # Glass Motion Frontend
@@ -41,6 +41,8 @@ You are a frontend engineer with a designer's eye. The goal is a page people wan
 | Smooth scroll | **lenis** | custom scroll hijacking |
 | 3D | **three + @react-three/fiber + @react-three/drei** | raw WebGL |
 
+This table is for new React projects and for jobs an existing project does not cover yet. In an existing project reuse its own libraries; in adapt or no-framework mode use `references/vanilla.md`.
+
 `motion`, `lenis` and the three.js packages are not in the user's list. They are the minimum add-ons needed for "smooth" and "3D". Add them only when the design plan calls for them.
 
 ## Workflow
@@ -60,8 +62,24 @@ Produce a compact plan:
 - **Motion budget:** list every animation and which user action triggers it.
 Then review the plan: if any part is what you would produce for any similar page, change it and say what you changed.
 
-### 3. Scaffold (only if the project lacks it)
-Run `node scripts/setup.mjs --preset full` (presets: `full`, `no-3d`, `lite`; add `--dry-run` to preview) or follow `references/library-map.md`. Confirm Tailwind v4, `components.json` and Biome are present before adding components.
+### 3. Stack and scaffold
+**An existing, running project always wins.** Adapt the skill to it. Never install, replace or migrate a framework, UI kit, CSS framework, icon set, form/data/toast library, linter or test runner on your own, even if it differs from the table below. Reuse what the project already has and follow its conventions. The only exception is a real need the project cannot meet (for example the design requires a library it lacks): then name the exact packages and why, ask the user once, and install only after they approve.
+
+Detect the stack before touching anything:
+- `package.json` with `next`, or `react` (+ `vite`): **React mode**. Use the table below only for jobs the project does not already cover; keep its existing UI kit, toasts, forms and data layer.
+- `package.json` with Vue, Svelte, Angular, Astro, Solid, Preact, Lit or no UI framework: **adapt mode**. Keep the framework. Use the principles, tokens, glass and motion rules in plain CSS (`references/vanilla.md`); the React-only libraries do not apply.
+- No `package.json`, but an `index.html`: **no-framework mode**. Read `references/vanilla.md`. Do not add a build step or npm packages the user did not ask for.
+- Empty folder (nothing but VCS, `AGENTS.md`, `.claude/`, `.agents/`): there is no project yet. **Ask the user once** which they want: Next.js (recommended), Vite + React, or plain HTML/CSS/JS with no framework. Never pick for them.
+
+Run setup from the project root (the script lives in this skill's folder, for example `.claude/skills/glass-motion-frontend/scripts/setup.mjs` or `.agents/skills/...`):
+
+```bash
+node <skill-folder>/scripts/setup.mjs --stack next      # empty folder only. or: vite | vanilla
+node <skill-folder>/scripts/setup.mjs                   # existing project: lists optional packages, installs nothing
+node <skill-folder>/scripts/setup.mjs --approve         # only after the user approved that list
+```
+
+In an existing project setup installs nothing by itself: without `--approve` it exits with code 3 and `NEEDS_APPROVAL` plus the package list. Ask the user; if they decline, carry on with the libraries the project has. Packages already present, and tools that duplicate ones the project uses (ESLint/Prettier vs Biome, Jest vs Vitest, Cypress vs Playwright), are never added. Setup never overwrites an existing file: new projects are generated in a temp folder and only missing files are copied in. Without `--stack` in an empty folder in a non-interactive shell it exits with code 2 and `NEEDS_STACK`: ask the user, then run again with `--stack`. For new React projects confirm Tailwind v4, `components.json` and Biome are present before adding components (`references/library-map.md` has the manual route).
 
 ### 4. Compose
 Build in this order so the base stays consistent:
@@ -140,6 +158,7 @@ Return: what was built, the design plan in four lines, which gates passed, what 
 
 ## References
 
+- `references/vanilla.md`: no-framework mode (plain HTML, CSS, JS): what replaces each library, glass and motion in plain CSS, checks.
 - `references/library-map.md`: install commands, imports, pitfalls per library.
 - `references/recipes.md`: glass tokens, tilt card, R3F hero with fallback, smooth scroll, RHF + Sonner, nuqs + TanStack Table.
 - `references/quality-gates.md`: commands, Playwright and Vitest templates, performance budget, final checklist.
