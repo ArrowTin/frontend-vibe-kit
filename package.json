@@ -1,0 +1,51 @@
+{
+  "name": "frontend-vibe-kit",
+  "version": "0.9.0",
+  "description": "An AI agent skill for building glossy, smooth, interactive React/Next.js frontends with coss ui, Magic UI, Tremor, TanStack and friends. Works with Claude Code, OpenCode, Codex and Antigravity.",
+  "type": "module",
+  "license": "MIT",
+  "author": "TinDev",
+  "bin": {
+    "frontend-vibe-kit": "bin/cli.mjs"
+  },
+  "files": [
+    "bin",
+    "skills",
+    "docs",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=18.3"
+  },
+  "scripts": {
+    "validate": "node scripts/validate.mjs",
+    "test": "node --test test/cli.test.mjs",
+    "check": "npm run validate && npm test",
+    "doctor": "node bin/cli.mjs doctor",
+    "set-owner": "node scripts/set-owner.mjs"
+  },
+  "keywords": [
+    "agent-skills",
+    "claude-code",
+    "opencode",
+    "codex",
+    "antigravity",
+    "frontend",
+    "react",
+    "nextjs",
+    "tailwind",
+    "vibe-coding"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ArrowTin/frontend-vibe-kit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ArrowTin/frontend-vibe-kit/issues"
+  },
+  "homepage": "https://github.com/ArrowTin/frontend-vibe-kit#readme"
+}

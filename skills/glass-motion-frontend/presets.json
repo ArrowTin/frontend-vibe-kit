@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "groups": {
+    "core": {
+      "dependencies": [
+        "lucide-react",
+        "sonner",
+        "nuqs",
+        "react-hook-form",
+        "zod",
+        "@hookform/resolvers",
+        "@tanstack/react-query",
+        "@tanstack/react-table",
+        "@tanstack/react-virtual",
+        "motion"
+      ]
+    },
+    "smooth": {
+      "dependencies": ["lenis"]
+    },
+    "3d": {
+      "dependencies": ["three", "@react-three/fiber", "@react-three/drei"],
+      "devDependencies": ["@types/three"]
+    },
+    "biome": {
+      "devDependenciesExact": ["@biomejs/biome"]
+    },
+    "testing": {
+      "devDependencies": [
+        "vitest",
+        "@vitejs/plugin-react",
+        "jsdom",
+        "@testing-library/react",
+        "@testing-library/jest-dom",
+        "@testing-library/user-event",
+        "@playwright/test",
+        "@axe-core/playwright",
+        "react-scan"
+      ]
+    }
+  },
+  "presets": {
+    "full": {
+      "description": "Everything: core libraries, smooth scroll, 3D, Biome and the full test toolchain",
+      "groups": ["core", "smooth", "3d", "biome", "testing"]
+    },
+    "no-3d": {
+      "description": "Same as full, without three.js packages",
+      "groups": ["core", "smooth", "biome", "testing"]
+    },
+    "lite": {
+      "description": "Core libraries and Biome only: no 3D, no smooth scroll, no test toolchain",
+      "groups": ["core", "biome"]
+    }
+  }
+}
