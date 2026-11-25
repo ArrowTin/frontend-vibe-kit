@@ -1,6 +1,6 @@
 # No-framework mode (plain HTML, CSS, JS)
 
-Use when the project has no `package.json` (an `index.html` and static files), and also as the CSS/motion guide in adapt mode (an existing Vue, Svelte, Angular, Astro or other non-React project): keep the project's framework and apply the same tokens, glass, motion and checks there. The goal and the quality floor are the same as in React mode; only the tools change. Do not add a bundler, TypeScript or npm packages unless the user asks. A page that opens straight from disk is a feature.
+Use when the project has no `package.json` (an `index.html` and static files), and also as the CSS/motion guide in adapt mode (an existing Vue, Svelte, Angular, Astro or other non-React project, or a server-side one: see `references/adapt.md`). Every effect here has a CSS-only version, which is what to use when a library is not installed and the user has not approved adding one: keep the project's framework and apply the same tokens, glass, motion and checks there. The goal and the quality floor are the same as in React mode; only the tools change. Do not add a bundler, TypeScript or npm packages unless the user asks. A page that opens straight from disk is a feature.
 
 ## What replaces each library
 

@@ -13,13 +13,13 @@ Brief → Design plan → Scaffold → Compose → Behavior → Feel → Verify 
 
 | # | Tahap | Yang dikerjakan | Pustaka utama | Hasil (bukti) |
 |---|---|---|---|---|
-| 1 | Brief | Tentukan subjek, audiens, tugas utama halaman | - | Satu kalimat konteks |
-| 2 | Design plan | Palet 4-6 warna, tipografi, model kedalaman, satu momen ikonik, anggaran gerak, wireframe ASCII | - | Rencana 10-15 baris, sudah direview |
-| 3 | Scaffold | Proyek Next.js, Tailwind v4, Biome, shadcn dengan coss style | coss ui, Biome | `pnpm dev` jalan |
+| 1 | Brief + deteksi | Tentukan subjek, audiens, tugas utama halaman. Jalankan `setup --detect` (read-only); di proyek berjalan baca konvensinya dan catat baseline cek milik proyek | - | Satu kalimat konteks + profil proyek |
+| 2 | Design plan | Blok "Project fit" (proyek berjalan), palet 4-6 warna (dari token proyek bila ada), tipografi, model kedalaman, satu momen ikonik, anggaran gerak, wireframe ASCII | - | Rencana 10-15 baris, sudah direview |
+| 3 | Stack + persetujuan | Folder kosong: tanya stack lalu scaffold (Next.js, Tailwind v4, Biome, coss style). Proyek berjalan: tidak ada scaffold; tambahan apa pun lewat satu pertanyaan persetujuan dan `--only` | coss ui, Biome (proyek baru) | Server dev jalan; proyek berjalan tidak berubah |
 | 4 | Compose | Token + utilitas `glass`, kontrol dari coss ui, konten asli, efek Magic UI, blok data Tremor, ikon Lucide, ilustrasi unDraw | coss ui, Magic UI, Tremor, Lucide, unDraw | Halaman statis yang sudah rapi |
 | 5 | Behavior | Form, data, tabel, state di URL, notifikasi | React Hook Form, TanStack, nuqs, Sonner | Semua alur jalan, ada state loading/kosong/error |
 | 6 | Feel | Gerak mikro, transisi layout, scroll halus, momen 3D | motion, lenis, R3F | Terasa halus di mobile menengah |
-| 7 | Verify | Lint, tipe, unit test, e2e + screenshot + aksesibilitas, profil render | Biome, Vitest, Playwright, React Scan | Semua gerbang lulus |
+| 7 | Verify | Proyek baru: lint, tipe, unit test, e2e + screenshot + aksesibilitas, profil render. Proyek berjalan: skrip cek milik proyek dibanding baseline; format hanya berkas yang disentuh | Biome, Vitest, Playwright, React Scan (proyek baru) | Semua gerbang lulus, tanpa kegagalan baru |
 | 8 | Report | Ringkas apa yang dibuat, apa yang ditinggalkan, kenapa | - | Laporan singkat |
 
 ## Aturan kerja sama antar pustaka

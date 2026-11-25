@@ -2,6 +2,8 @@
 
 Run in this order. Do not report "done" until every gate passes or the failure is explained.
 
+**Which gates apply.** New project: all six, with the commands below. Existing project: the project's own checks only, taken from `setup.mjs --detect` (`checks`) and run with its package manager (the commands below use pnpm as an example). Run them once before editing to get a baseline, and again after: you must not add failures, and you do not fix unrelated ones. A gate the project has no tool for is reported as "not run: no {tool} in the project"; it is not installed to make the gate pass. Format and autofix only the files you touched.
+
 | # | Gate | Command | Pass condition |
 |---|---|---|---|
 | 1 | Lint + format | `pnpm biome check --write .` then `pnpm biome check .` | zero errors |

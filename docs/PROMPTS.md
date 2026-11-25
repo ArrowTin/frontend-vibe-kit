@@ -1,6 +1,6 @@
 # Prompt uji
 
-Kit ini baru bisa disebut matang setelah diuji pada pekerjaan nyata. Jalankan prompt di bawah pada proyek Next.js kosong (preset `full`), di alat AI yang Anda pakai. Catat hasilnya; setiap kegagalan menjadi aturan baru di `SKILL.md`.
+Kit ini baru bisa disebut matang setelah diuji pada pekerjaan nyata. P1-P5 dijalankan pada proyek Next.js kosong (preset `full`), P6-P8 pada proyek yang sudah berjalan, di alat AI yang Anda pakai. Catat hasilnya; setiap kegagalan menjadi aturan baru di `SKILL.md`.
 
 ## Cara menguji
 
@@ -12,12 +12,12 @@ Kit ini baru bisa disebut matang setelah diuji pada pekerjaan nyata. Jalankan pr
 ## Kriteria umum (berlaku untuk semua prompt)
 
 - [ ] Agen menulis design plan **sebelum** koding (palet, tipografi, momen ikonik, anggaran gerak)
-- [ ] Hanya pustaka dari tabel kepemilikan yang dipakai, tidak ada duplikat fungsi
+- [ ] Hanya pustaka dari tabel kepemilikan yang dipakai di proyek baru; di proyek berjalan pustaka milik proyek dipakai. Tidak ada duplikat fungsi
 - [ ] Komponen coss ui, Magic UI, Tremor dipasang lewat docs/registry, bukan dikarang
 - [ ] `prefers-reduced-motion` ditangani
 - [ ] Fokus keyboard terlihat
 - [ ] Ada state loading, kosong, galat untuk setiap tampilan data
-- [ ] Biome, tsc, Vitest, Playwright, build dijalankan dan hasilnya dilaporkan
+- [ ] Cek yang dimiliki proyek dijalankan dan hasilnya dilaporkan (proyek baru: Biome, tsc, Vitest, Playwright, build); yang tidak dimiliki dilaporkan "tidak dijalankan", tidak dipasang
 - [ ] Laporan akhir menyebut apa yang ditinggalkan dan kenapa
 
 ## P1. Landing page
@@ -69,10 +69,42 @@ Pakai glass-motion-frontend. Tambahkan hero 3D dengan objek kaca yang berputar p
 - [ ] Cadangan untuk reduced motion, hemat data, dan perangkat lemah
 - [ ] Jeda saat di luar layar
 
+## P6. Proyek berjalan: polish tanpa memasang apa pun
+
+Siapkan proyek yang sudah berjalan dengan UI kit sendiri (misalnya MUI atau Chakra, atau Tailwind v3) dan lint/tes sendiri.
+
+```
+Pakai glass-motion-frontend. Percantik halaman pengaturan proyek ini agar terasa halus dan modern.
+```
+- [ ] Agen menjalankan `setup --detect` dan membaca file yang akan diubah sebelum merencanakan
+- [ ] Blok "Project fit" ada di rencana desain
+- [ ] `package.json` dan lockfile tidak berubah (tanpa paket baru, tanpa `shadcn init`)
+- [ ] Token masuk ke stylesheet yang sudah ada; UI kit, ikon, toast, dan form milik proyek dipakai
+- [ ] Skrip cek milik proyek dijalankan dan dibanding baseline; tidak ada formatter se-repo
+- [ ] Hanya berkas yang perlu yang diubah (cek `git diff --stat`)
+
+## P7. Proyek berjalan: butuh paket baru
+
+```
+Pakai glass-motion-frontend. Tambahkan hero 3D ke landing page proyek ini.
+```
+- [ ] Agen berhenti dan bertanya satu kali: nama paket, fungsinya, alternatif CSS-only
+- [ ] Setelah "ya": `setup --only <paket> --approve`; setelah "tidak": jalan terus dengan alternatif CSS-only
+
+## P8. Proyek non-JavaScript
+
+Jalankan di folder Laravel/Django/Rails/WordPress/situs statis.
+
+```
+Pakai glass-motion-frontend. Percantik halaman beranda.
+```
+- [ ] Tidak ada scaffold Next.js/Vite, tidak ada `package.json` baru
+- [ ] CSS/JS masuk lewat template dan pipeline aset milik proyek
+
 ## Lembar catatan
 
 | Tanggal | Alat AI + model | Prompt | Kriteria gagal | Perbaikan yang dilakukan |
 |---|---|---|---|---|
 | | | | | |
 
-Rilis v1.0.0 saat kelima prompt lulus tanpa koreksi manual berulang di sedikitnya dua alat AI.
+Rilis v1.0.0 saat kedelapan prompt lulus tanpa koreksi manual berulang di sedikitnya dua alat AI.

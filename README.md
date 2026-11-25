@@ -4,7 +4,7 @@ Skill untuk AI coding agent yang membuat frontend **bersih, glossy, halus, inter
 
 Bekerja di **Claude Code, OpenCode, Codex, Antigravity**, dan alat lain lewat `AGENTS.md`. Pemasang berjalan di Windows, macOS, dan Linux, tanpa dependensi tambahan selain Node.js 18.3+.
 
-> Status: **v0.10.0 (pra-rilis)**. Pemasang sudah dites otomatis; skill-nya sendiri menunggu uji pada proyek nyata (lihat [docs/PROMPTS.md](docs/PROMPTS.md)).
+> Status: **v0.11.0 (pra-rilis)**. Pemasang sudah dites otomatis; skill-nya sendiri menunggu uji pada proyek nyata (lihat [docs/PROMPTS.md](docs/PROMPTS.md)).
 
 ## Mulai cepat
 
@@ -44,7 +44,8 @@ Alternatif tanpa `npx`: `git clone`, lalu `node bin/cli.mjs install --dir /path/
 | `install` | Menyalin skill ke folder yang dibaca alat AI (menimpa versi lama = pembaruan) |
 | `uninstall` | Menghapus skill (dan blok aturan di `AGENTS.md` dengan `--with-agents-md`) |
 | `doctor` | Memeriksa instalasi, versi, dan kesiapan proyek (React 19, Tailwind v4, paket, Biome, coss ui) |
-| `setup` | Proyek sudah ada: menyesuaikan diri, menampilkan paket opsional, dan **tidak memasang apa pun tanpa persetujuan** (`--approve`). Folder kosong: menanyakan stack (Next.js, Vite + React, HTML/CSS/JS murni), membuat proyeknya, lalu memasang paket |
+| `detect` | Profil **read-only** proyek: jenis, styling, pustaka yang sudah dipakai per pekerjaan (ikon, toast, form, data, animasi, tes), skrip pengecekan milik proyek. Tidak mengubah apa pun; `--json` untuk mesin |
+| `setup` | Proyek sudah ada (stack apa pun): menyesuaikan diri, menampilkan paket opsional, dan **tidak memasang apa pun tanpa persetujuan** (`--approve`). Folder kosong: menanyakan stack (Next.js, Vite + React, HTML/CSS/JS murni), membuat proyeknya, lalu memasang paket |
 
 | Opsi | Arti |
 |---|---|
@@ -55,7 +56,9 @@ Alternatif tanpa `npx`: `git clone`, lalu `node bin/cli.mjs install --dir /path/
 | `--preset full\|no-3d\|lite` | Pilihan paket untuk `setup` dan `doctor` |
 | `--pm npm\|pnpm\|yarn\|bun` | Manajer paket (bawaan: terdeteksi dari lockfile) |
 | `--with-agents-md` | Tambah blok aturan ke `AGENTS.md` dan `CLAUDE.md` (tidak menimpa isi Anda) |
-| `--approve` | Setuju memasang paket opsional yang ditampilkan `setup` untuk proyek yang sudah ada |
+| `--approve` | Persetujuan Anda: memasang paket opsional yang ditampilkan `setup` di proyek yang sudah ada, atau (bersama `--stack next\|vite`) menambahkan framework ke folder yang sudah berisi proyek |
+| `--only a,b` | Bersama `--approve`: pasang hanya paket ini dari daftar (yang benar-benar dibutuhkan rencana desain) |
+| `--json` | Bersama `detect`: keluaran untuk mesin |
 | `--no-backup` | Jangan buat `AGENTS.md.fvk-backup` / `CLAUDE.md.fvk-backup` sebelum mengubah berkas yang sudah ada |
 | `--no-browsers` | Lewati unduhan browser Playwright |
 | `--force` | Timpa atau hapus folder skill yang punya perubahan lokal |
@@ -105,6 +108,12 @@ Ingin mengubah skill? Edit di fork repo ini, bukan di folder hasil pemasangan, s
 
 **Sudah punya situs HTML biasa (ada `index.html`, tanpa `package.json`)?** `setup` mengenalinya sebagai proyek tanpa framework dan tidak memasang atau mengubah apa pun.
 
+**Proyek saya bukan JavaScript (Laravel, Django, Rails, WordPress, Go, .NET, Hugo, Jekyll).** Dikenali sebagai proyek yang berjalan: skill menaruh token, glass, dan motion di template, stylesheet, dan skrip milik proyek (lihat [references/adapt.md](skills/glass-motion-frontend/references/adapt.md)), tanpa menambah npm atau framework. `setup --stack next` ke folder seperti ini ditolak dengan kode 4 / `NEEDS_CONFIRMATION` kecuali Anda menyetujui dengan `--approve`.
+
+**Monorepo.** `detect` di root menampilkan paket-paketnya; jalankan di paket yang diubah dengan `--dir <paket>`. Tidak ada yang dipasang di root.
+
+**`npm install` gagal dengan `ERESOLVE` saat `setup`?** Di proyek baru, `@types/node` otomatis dinaikkan ke `^22` (yang diminta `vitest@5`) dan bila masih bentrok dicoba ulang sekali dengan `--legacy-peer-deps`. Di proyek yang sudah berjalan, `setup` tidak memaksa: ia menjelaskan penyebabnya dan tiga pilihan, `package.json` tidak berubah.
+
 **Skill sudah terpasang di folder yang salah.** Jalankan `uninstall` di folder tersebut, lalu `install` lagi di folder proyek yang benar.
 
 ## Fungsi tiap pustaka
@@ -151,7 +160,7 @@ Biome + Vitest + Playwright + React Scan (gerbang mutu)
 
 ```
 frontend-vibe-kit/
-├── bin/cli.mjs, lib.mjs            # CLI: install, uninstall, doctor, setup
+├── bin/cli.mjs, lib.mjs            # CLI: install, uninstall, doctor, detect, setup
 ├── skills/glass-motion-frontend/
 │   ├── SKILL.md                    # prinsip, kepemilikan pustaka, workflow, aturan rasa
 │   ├── presets.json                # paket npm per preset
